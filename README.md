@@ -1,6 +1,6 @@
 # @lyric-video-maker/plugin-particles
 
-Particles plugin for [LyricVideoMaker](https://github.com/lyric-video-maker). Adds customizable particle effects as scene components.
+Particles plugin for [LyricVideoMaker](https://mrkmg.github.io/LyricVideoMaker/). Adds customizable particle effects as scene components.
 
 ## Features
 
@@ -16,7 +16,7 @@ Particles plugin for [LyricVideoMaker](https://github.com/lyric-video-maker). Ad
 Import into LyricVideoMaker via GitHub URL:
 
 ```
-https://github.com/lyric-video-maker/plugin-particles.git
+https://github.com/mrkmg/LyricVideoMaker-Particles-Plugin.git
 ```
 
 ## Development
