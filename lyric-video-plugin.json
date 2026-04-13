@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "particles.particle-pack",
+  "name": "Particles Pack",
+  "version": "0.1.0",
+  "entry": "dist/plugin.cjs",
+  "components": ["particles.particles"],
+  "scenes": [
+    "particles.snowfall",
+    "particles.starfield",
+    "particles.confetti",
+    "particles.fireflies",
+    "particles.rising-hearts",
+    "particles.rain",
+    "particles.bubbles",
+    "particles.galaxy-swirl"
+  ]
+}

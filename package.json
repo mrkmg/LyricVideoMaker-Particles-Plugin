@@ -1,0 +1,16 @@
+{
+  "name": "@lyric-video-maker/particles-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@lyric-video-maker/plugin-base": "file:../LyricVideoMaker/packages/plugin-base",
+    "react": "^18.3.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  }
+}
