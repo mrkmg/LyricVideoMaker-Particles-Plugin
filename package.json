@@ -1,14 +1,15 @@
 {
-  "name": "@lyric-video-maker/particles-plugin",
+  "name": "@lyric-video-maker/plugin-particles",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "version": "node -e \"const f='lyric-video-plugin.json';const j=JSON.parse(require('fs').readFileSync(f));j.version=require('./package.json').version;require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\\n')\" && git add lyric-video-plugin.json"
   },
   "devDependencies": {
-    "@lyric-video-maker/plugin-base": "file:../LyricVideoMaker/packages/plugin-base",
+    "@lyric-video-maker/plugin-base": "^0.2.1",
     "react": "^18.3.1",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2"
