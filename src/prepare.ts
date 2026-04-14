@@ -56,7 +56,11 @@ export async function prepareParticles(
   );
 
   const totalFrames = video.durationInFrames;
-  const cycleCount = Math.max(1, Math.round(options.speed / 30));
+  // Cycle duration inversely proportional to speed:
+  // speed=20 → 8s, speed=50 → 4s, speed=140 → 1.5s
+  const cycleSeconds = Math.min(8, Math.max(1.5, 200 / options.speed));
+  const cycleFrames = Math.floor(cycleSeconds * video.fps);
+  const cycleCount = Math.max(1, Math.floor(totalFrames / cycleFrames));
   const lifetimeFrames = Math.max(
     Math.floor(totalFrames / cycleCount),
     Math.floor(video.fps * 1.5),

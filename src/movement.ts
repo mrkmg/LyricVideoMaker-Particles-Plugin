@@ -79,7 +79,7 @@ export function computePosition(
 function floatUp(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
 ): Position {
-  const travel = t * speed * speedMul * 120;
+  const travel = t * speed * speedMul * 250;
   const wobble = Math.sin(t * TAU * 2 + seed * 10) * turb * 15;
   _pos.x = p.startX + wobble;
   _pos.y = p.startY - travel;
@@ -89,7 +89,7 @@ function floatUp(
 function fallDown(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
 ): Position {
-  const travel = t * speed * speedMul * 120;
+  const travel = t * speed * speedMul * 250;
   const wobble = Math.sin(t * TAU * 2 + seed * 10) * turb * 15;
   _pos.x = p.startX + wobble;
   _pos.y = p.startY + travel;
@@ -100,7 +100,7 @@ function drift(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
   dir: number,
 ): Position {
-  const travel = t * speed * speedMul * 120;
+  const travel = t * speed * speedMul * 250;
   const wobble = Math.sin(t * TAU * 3 + seed * 7) * turb * 10;
   _pos.x = p.startX + travel * dir;
   _pos.y = p.startY + wobble;
@@ -110,7 +110,7 @@ function drift(
 function swirl(
   t: number, p: ParticleState, speed: number, radius: number, seed: number, speedMul: number,
 ): Position {
-  const angle = t * TAU * speed * speedMul * 2 + seed * TAU;
+  const angle = t * TAU * speed * speedMul * 4 + seed * TAU;
   const r = radius * 50 * (1 - t * 0.3);
   _pos.x = 50 + Math.cos(angle) * r + (p.startX - 50) * 0.3;
   _pos.y = 50 + Math.sin(angle) * r + (p.startY - 50) * 0.3;
@@ -121,7 +121,7 @@ function explode(
   t: number, p: ParticleState, speed: number, seed: number, speedMul: number,
 ): Position {
   const angle = seed * TAU;
-  const distance = t * speed * speedMul * 60;
+  const distance = t * speed * speedMul * 130;
   const eased = 1 - Math.pow(1 - t, 2);
   _pos.x = 50 + Math.cos(angle) * distance * eased;
   _pos.y = 50 + Math.sin(angle) * distance * eased;
@@ -132,15 +132,15 @@ function converge(
   t: number, p: ParticleState, speed: number, seed: number, speedMul: number,
 ): Position {
   const eased = t * t;
-  _pos.x = p.startX + (50 - p.startX) * eased * speed * speedMul * 0.02;
-  _pos.y = p.startY + (50 - p.startY) * eased * speed * speedMul * 0.02;
+  _pos.x = p.startX + (50 - p.startX) * eased * speed * speedMul * 0.5;
+  _pos.y = p.startY + (50 - p.startY) * eased * speed * speedMul * 0.5;
   return _pos;
 }
 
 function randomWalk(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
 ): Position {
-  const scale = speed * speedMul * turb * 0.5;
+  const scale = speed * speedMul * turb * 2.0;
   _pos.x = p.startX + noise(seed, t * 4) * scale;
   _pos.y = p.startY + noise(seed + 100, t * 4) * scale;
   return _pos;
@@ -149,7 +149,7 @@ function randomWalk(
 function waveSine(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
 ): Position {
-  const hTravel = t * speed * speedMul * 80;
+  const hTravel = t * speed * speedMul * 180;
   const amplitude = 20 + turb * 30;
   const wave = Math.sin(t * TAU * 3 + seed * 5) * amplitude / 100 * 30;
   _pos.x = p.startX + hTravel;
@@ -160,7 +160,7 @@ function waveSine(
 function rain(
   t: number, p: ParticleState, speed: number, seed: number, speedMul: number,
 ): Position {
-  const travel = t * speed * speedMul * 150;
+  const travel = t * speed * speedMul * 280;
   const jitter = Math.sin(seed * 99.7) * 2;
   _pos.x = p.startX + jitter;
   _pos.y = p.startY + travel;
@@ -170,7 +170,7 @@ function rain(
 function snow(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
 ): Position {
-  const travel = t * speed * speedMul * 60;
+  const travel = t * speed * speedMul * 130;
   const d = Math.sin(t * TAU * 1.5 + seed * 8) * (10 + turb * 20);
   _pos.x = p.startX + d;
   _pos.y = p.startY + travel;

@@ -675,7 +675,9 @@ async function prepareParticles(ctx) {
     options.particleCount
   );
   const totalFrames = video.durationInFrames;
-  const cycleCount = Math.max(1, Math.round(options.speed / 30));
+  const cycleSeconds = Math.min(8, Math.max(1.5, 200 / options.speed));
+  const cycleFrames = Math.floor(cycleSeconds * video.fps);
+  const cycleCount = Math.max(1, Math.floor(totalFrames / cycleFrames));
   const lifetimeFrames = Math.max(
     Math.floor(totalFrames / cycleCount),
     Math.floor(video.fps * 1.5)
@@ -823,28 +825,28 @@ function computePosition(t, particle, params) {
   }
 }
 function floatUp(t, p, speed, turb, seed, speedMul) {
-  const travel = t * speed * speedMul * 120;
+  const travel = t * speed * speedMul * 250;
   const wobble = Math.sin(t * TAU * 2 + seed * 10) * turb * 15;
   _pos.x = p.startX + wobble;
   _pos.y = p.startY - travel;
   return _pos;
 }
 function fallDown(t, p, speed, turb, seed, speedMul) {
-  const travel = t * speed * speedMul * 120;
+  const travel = t * speed * speedMul * 250;
   const wobble = Math.sin(t * TAU * 2 + seed * 10) * turb * 15;
   _pos.x = p.startX + wobble;
   _pos.y = p.startY + travel;
   return _pos;
 }
 function drift(t, p, speed, turb, seed, speedMul, dir) {
-  const travel = t * speed * speedMul * 120;
+  const travel = t * speed * speedMul * 250;
   const wobble = Math.sin(t * TAU * 3 + seed * 7) * turb * 10;
   _pos.x = p.startX + travel * dir;
   _pos.y = p.startY + wobble;
   return _pos;
 }
 function swirl(t, p, speed, radius, seed, speedMul) {
-  const angle = t * TAU * speed * speedMul * 2 + seed * TAU;
+  const angle = t * TAU * speed * speedMul * 4 + seed * TAU;
   const r = radius * 50 * (1 - t * 0.3);
   _pos.x = 50 + Math.cos(angle) * r + (p.startX - 50) * 0.3;
   _pos.y = 50 + Math.sin(angle) * r + (p.startY - 50) * 0.3;
@@ -852,7 +854,7 @@ function swirl(t, p, speed, radius, seed, speedMul) {
 }
 function explode(t, p, speed, seed, speedMul) {
   const angle = seed * TAU;
-  const distance = t * speed * speedMul * 60;
+  const distance = t * speed * speedMul * 130;
   const eased = 1 - Math.pow(1 - t, 2);
   _pos.x = 50 + Math.cos(angle) * distance * eased;
   _pos.y = 50 + Math.sin(angle) * distance * eased;
@@ -860,18 +862,18 @@ function explode(t, p, speed, seed, speedMul) {
 }
 function converge(t, p, speed, seed, speedMul) {
   const eased = t * t;
-  _pos.x = p.startX + (50 - p.startX) * eased * speed * speedMul * 0.02;
-  _pos.y = p.startY + (50 - p.startY) * eased * speed * speedMul * 0.02;
+  _pos.x = p.startX + (50 - p.startX) * eased * speed * speedMul * 0.5;
+  _pos.y = p.startY + (50 - p.startY) * eased * speed * speedMul * 0.5;
   return _pos;
 }
 function randomWalk(t, p, speed, turb, seed, speedMul) {
-  const scale = speed * speedMul * turb * 0.5;
+  const scale = speed * speedMul * turb * 2;
   _pos.x = p.startX + noise(seed, t * 4) * scale;
   _pos.y = p.startY + noise(seed + 100, t * 4) * scale;
   return _pos;
 }
 function waveSine(t, p, speed, turb, seed, speedMul) {
-  const hTravel = t * speed * speedMul * 80;
+  const hTravel = t * speed * speedMul * 180;
   const amplitude = 20 + turb * 30;
   const wave = Math.sin(t * TAU * 3 + seed * 5) * amplitude / 100 * 30;
   _pos.x = p.startX + hTravel;
@@ -879,14 +881,14 @@ function waveSine(t, p, speed, turb, seed, speedMul) {
   return _pos;
 }
 function rain(t, p, speed, seed, speedMul) {
-  const travel = t * speed * speedMul * 150;
+  const travel = t * speed * speedMul * 280;
   const jitter = Math.sin(seed * 99.7) * 2;
   _pos.x = p.startX + jitter;
   _pos.y = p.startY + travel;
   return _pos;
 }
 function snow(t, p, speed, turb, seed, speedMul) {
-  const travel = t * speed * speedMul * 60;
+  const travel = t * speed * speedMul * 130;
   const d = Math.sin(t * TAU * 1.5 + seed * 8) * (10 + turb * 20);
   _pos.x = p.startX + d;
   _pos.y = p.startY + travel;
@@ -1210,7 +1212,7 @@ function buildPresets(defaultOptions) {
       shape: "snowflake",
       movementPattern: "snow",
       particleCount: 80,
-      speed: 25,
+      speed: 20,
       speedVariation: 40,
       spawnArea: "top",
       turbulence: 40,
@@ -1232,7 +1234,7 @@ function buildPresets(defaultOptions) {
       shape: "circle",
       movementPattern: "float-up",
       particleCount: 120,
-      speed: 15,
+      speed: 12,
       speedVariation: 50,
       spawnArea: "full",
       turbulence: 10,
@@ -1256,7 +1258,7 @@ function buildPresets(defaultOptions) {
       shape: "square",
       movementPattern: "explode",
       particleCount: 100,
-      speed: 120,
+      speed: 70,
       speedVariation: 40,
       spawnArea: "center",
       colorMode: "rainbow",
@@ -1271,7 +1273,7 @@ function buildPresets(defaultOptions) {
       shape: "circle",
       movementPattern: "random-walk",
       particleCount: 25,
-      speed: 30,
+      speed: 20,
       speedVariation: 40,
       spawnArea: "full",
       turbulence: 60,
@@ -1290,7 +1292,7 @@ function buildPresets(defaultOptions) {
       shape: "heart",
       movementPattern: "float-up",
       particleCount: 40,
-      speed: 35,
+      speed: 25,
       speedVariation: 30,
       spawnArea: "bottom",
       turbulence: 30,
@@ -1308,7 +1310,7 @@ function buildPresets(defaultOptions) {
       shape: "circle",
       movementPattern: "rain",
       particleCount: 150,
-      speed: 140,
+      speed: 80,
       speedVariation: 30,
       spawnArea: "top",
       colorMode: "palette",
@@ -1326,7 +1328,7 @@ function buildPresets(defaultOptions) {
       shape: "ring",
       movementPattern: "float-up",
       particleCount: 35,
-      speed: 20,
+      speed: 15,
       speedVariation: 40,
       spawnArea: "bottom",
       turbulence: 25,
@@ -1342,7 +1344,7 @@ function buildPresets(defaultOptions) {
       shape: "sparkle",
       movementPattern: "swirl",
       particleCount: 80,
-      speed: 40,
+      speed: 25,
       speedVariation: 30,
       spawnArea: "full",
       swirlRadius: 45,
