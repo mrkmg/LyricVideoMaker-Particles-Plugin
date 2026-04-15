@@ -1188,6 +1188,19 @@ function buildComponent(React, computeTransformStyle, computeTimingOpacity) {
   };
 }
 
+// node_modules/@lyric-video-maker/plugin-base/dist/index.js
+var PLUGIN_ASSET_PREFIX = "plugin-asset://";
+function createPluginAssetUri(pluginId, relativePath) {
+  const normalizedPath = relativePath.replace(/\\/g, "/");
+  const segments = normalizedPath.split("/");
+  if (segments.some((segment) => segment === "..")) {
+    throw new Error(
+      `Plugin asset path must not contain ".." segments: "${relativePath}"`
+    );
+  }
+  return `${PLUGIN_ASSET_PREFIX}${pluginId}/${normalizedPath}`;
+}
+
 // src/presets.ts
 function buildPresets(defaultOptions) {
   function makeScene(id, name, description, overrides) {
@@ -1364,7 +1377,138 @@ function buildPresets(defaultOptions) {
       glowEnabled: true,
       glowColor: "#9966ff",
       glowStrength: 50
-    })
+    }),
+    // Lofi+ — extends the built-in Lofi scene with warm floating particles
+    {
+      id: "particles.lofi-plus",
+      name: "Lofi+",
+      description: "The cozy lofi scene enhanced with warm glowing firefly particles drifting through the room.",
+      source: "plugin",
+      readOnly: true,
+      components: [
+        {
+          id: "background-image-1",
+          componentId: "image",
+          enabled: true,
+          options: {
+            source: createPluginAssetUri("scene-registry", "assets/lofi-background.png"),
+            fitMode: "cover"
+          }
+        },
+        {
+          id: "background-color-1",
+          componentId: "background-color",
+          enabled: true,
+          options: {
+            mode: "gradient",
+            direction: "0deg",
+            topColor: "#1a0f0a",
+            topOpacity: 25,
+            bottomColor: "#1a0f0a",
+            bottomOpacity: 65
+          }
+        },
+        {
+          id: "particles-1",
+          componentId: "particles.particles",
+          enabled: true,
+          options: {
+            ...defaultOptions,
+            shape: "circle",
+            movementPattern: "random-walk",
+            particleCount: 20,
+            speed: 15,
+            speedVariation: 40,
+            spawnArea: "full",
+            turbulence: 50,
+            colorMode: "palette",
+            paletteColors: "#ffb347,#ffdd88,#e8825c,#ffcc66",
+            baseSize: 6,
+            sizeVariation: 40,
+            baseOpacity: 50,
+            opacityVariation: 30,
+            particleRotation: false,
+            glowEnabled: true,
+            glowColor: "#ffb347",
+            glowStrength: 70
+          }
+        },
+        {
+          id: "equalizer-1",
+          componentId: "equalizer",
+          enabled: true,
+          options: {
+            y: 80,
+            height: 20,
+            layoutMode: "mirrored",
+            barCount: 24,
+            cornerRadius: 999,
+            minBarScale: 8,
+            maxBarScale: 80,
+            colorMode: "gradient",
+            primaryColor: "#ffb347",
+            secondaryColor: "#e8825c",
+            opacity: 40,
+            smoothing: 55,
+            attackMs: 80,
+            releaseMs: 400,
+            sensitivity: 1,
+            glowEnabled: true,
+            glowColor: "#ffb347",
+            glowStrength: 25,
+            shadowEnabled: false
+          }
+        },
+        {
+          id: "divider-1",
+          componentId: "shape",
+          enabled: true,
+          options: {
+            shapeType: "line",
+            x: 5,
+            y: 80,
+            width: 90,
+            height: 1,
+            fillEnabled: false,
+            strokeEnabled: true,
+            strokeColor: "#fff5e6",
+            strokeWidth: 1,
+            strokeOpacity: 15
+          }
+        },
+        {
+          id: "lyrics-by-line-1",
+          componentId: "lyrics-by-line",
+          enabled: true,
+          options: {
+            height: 78,
+            lyricColor: "#fff5e6",
+            lyricPosition: "bottom",
+            lyricSize: 64,
+            shadowEnabled: true,
+            shadowColor: "#1a0f0a",
+            shadowIntensity: 70
+          }
+        },
+        {
+          id: "static-text-1",
+          componentId: "static-text",
+          enabled: true,
+          options: {
+            text: "now playing",
+            y: 2,
+            height: 6,
+            x: 2,
+            width: 30,
+            fontSize: 16,
+            fontWeight: 300,
+            color: "#aa9080",
+            textAlign: "left",
+            textCase: "lowercase"
+          }
+        }
+      ]
+    }
   ];
 }
 
