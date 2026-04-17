@@ -144,6 +144,15 @@ var movementCategory = {
     },
     {
       type: "number",
+      id: "randomWalkRandomness",
+      label: "Walk Randomness",
+      defaultValue: 5,
+      min: 0,
+      max: 100,
+      step: 1
+    },
+    {
+      type: "number",
       id: "turbulence",
       label: "Turbulence",
       defaultValue: 20,
@@ -412,10 +421,8 @@ var effectsCategory = {
     }
   ]
 };
-function buildOptionsSchema(transformCategory, timingCategory) {
+function buildOptionsSchema() {
   return [
-    transformCategory,
-    timingCategory,
     particlesCategory,
     movementCategory,
     appearanceCategory,
@@ -424,10 +431,8 @@ function buildOptionsSchema(transformCategory, timingCategory) {
     effectsCategory
   ];
 }
-function buildDefaultOptions(defaultTransform, defaultTiming) {
+function buildDefaultOptions() {
   return {
-    ...defaultTransform,
-    ...defaultTiming,
     // Particles
     shape: "circle",
     customText: "\u2726",
@@ -441,6 +446,7 @@ function buildDefaultOptions(defaultTransform, defaultTiming) {
     directionAngle: 0,
     turbulence: 20,
     swirlRadius: 30,
+    randomWalkRandomness: 5,
     // Appearance
     colorMode: "single",
     primaryColor: "#ffffff",
@@ -784,10 +790,17 @@ function getPrepareCacheKey(ctx) {
   });
 }
 
+// src/component.ts
+var import_plugin_base = require("@lyric-video-maker/plugin-base");
+
 // src/movement.ts
 var TAU = Math.PI * 2;
 function noise(seed, t) {
   return Math.sin(seed * 12.9898 + t * 43.758) * 0.5 + Math.sin(seed * 7.233 + t * 21.317) * 0.3 + Math.sin(seed * 3.145 + t * 67.891) * 0.2;
+}
+function hash01(seed, step) {
+  const x = Math.sin(seed * 127.1 + step * 311.7) * 43758.5453;
+  return x - Math.floor(x);
 }
 var _pos = { x: 0, y: 0 };
 function computePosition(t, particle, params) {
@@ -811,7 +824,7 @@ function computePosition(t, particle, params) {
     case "converge":
       return converge(t, particle, speed, seed, speedMul);
     case "random-walk":
-      return randomWalk(t, particle, speed, turb, seed, speedMul);
+      return randomWalk(t, particle, speed, turb, seed, speedMul, params.randomWalkRandomness / 100);
     case "wave-sine":
       return waveSine(t, particle, speed, turb, seed, speedMul);
     case "rain":
@@ -866,10 +879,33 @@ function converge(t, p, speed, seed, speedMul) {
   _pos.y = p.startY + (50 - p.startY) * eased * speed * speedMul * 0.5;
   return _pos;
 }
-function randomWalk(t, p, speed, turb, seed, speedMul) {
-  const scale = speed * speedMul * turb * 2;
-  _pos.x = p.startX + noise(seed, t * 4) * scale;
-  _pos.y = p.startY + noise(seed + 100, t * 4) * scale;
+var WALK_STEPS = 120;
+function randomWalk(t, p, speed, turb, seed, speedMul, randomness) {
+  const stepSize = speed * speedMul * 250 / WALK_STEPS;
+  const numSteps = Math.floor(t * WALK_STEPS);
+  const frac = t * WALK_STEPS - numSteps;
+  let dir = hash01(seed, 0) * TAU;
+  let x = 0;
+  let y = 0;
+  for (let i = 1; i <= numSteps; i++) {
+    if (hash01(seed, i) < randomness) {
+      dir = hash01(seed + 50, i) * TAU;
+    }
+    x += Math.cos(dir) * stepSize;
+    y += Math.sin(dir) * stepSize;
+  }
+  if (frac > 0) {
+    if (hash01(seed, numSteps + 1) < randomness) {
+      dir = hash01(seed + 50, numSteps + 1) * TAU;
+    }
+    x += Math.cos(dir) * stepSize * frac;
+    y += Math.sin(dir) * stepSize * frac;
+  }
+  const wobble = turb * 5;
+  x += noise(seed, t * 6) * wobble;
+  y += noise(seed + 100, t * 6) * wobble;
+  _pos.x = p.startX + x;
+  _pos.y = p.startY + y;
   return _pos;
 }
 function waveSine(t, p, speed, turb, seed, speedMul) {
@@ -1014,16 +1050,14 @@ var SHAPE_DRAW = {
   sparkle: drawSparkle,
   snowflake: drawSnowflake
 };
-function buildComponent(React, computeTransformStyle, computeTimingOpacity) {
-  let canvasRef = null;
-  let canvasCtx = null;
+function buildComponent(React) {
   return function ParticlesComponent(props) {
-    const { options, frame, timeMs, video, prepared } = props;
+    const { options, frame, video, prepared, containerRef } = props;
+    const { width: cw, height: ch } = (0, import_plugin_base.useContainerSize)(containerRef);
     const data = prepared;
     if (!data.particles || data.particles.length === 0) return null;
-    const containerStyle = computeTransformStyle(options, video);
-    const timingOpacity = computeTimingOpacity(timeMs, options);
-    if (timingOpacity <= 0) return null;
+    const w = Math.max(1, Math.round(cw || video.width));
+    const h = Math.max(1, Math.round(ch || video.height));
     let audioMods = NO_AUDIO;
     if (options.audioReactive && data.audioFrames) {
       const bandValues = data.audioFrames[Math.min(frame, data.audioFrames.length - 1)] ?? null;
@@ -1049,21 +1083,14 @@ function buildComponent(React, computeTransformStyle, computeTimingOpacity) {
       pattern: options.movementPattern,
       speed: options.speed,
       turbulence: options.turbulence,
-      swirlRadius: options.swirlRadius
+      swirlRadius: options.swirlRadius,
+      randomWalkRandomness: options.randomWalkRandomness
     };
     const colors = data.resolvedColors;
-    const w = video.width;
-    const h = video.height;
     const speedAccum = data.audioSpeedAccum;
     const refCallback = (el) => {
       if (!el) return;
-      if (el !== canvasRef) {
-        canvasRef = el;
-        canvasCtx = el.getContext("2d");
-        el.width = w;
-        el.height = h;
-      }
-      const ctx = canvasCtx;
+      const ctx = el.getContext("2d");
       if (!ctx) return;
       if (el.width !== w || el.height !== h) {
         el.width = w;
@@ -1167,9 +1194,10 @@ function buildComponent(React, computeTransformStyle, computeTimingOpacity) {
     return React.createElement(
       "div",
       {
+        ref: containerRef,
         style: {
-          ...containerStyle,
-          opacity: timingOpacity,
+          width: "100%",
+          height: "100%",
           overflow: "hidden",
           pointerEvents: "none"
         }
@@ -1188,20 +1216,25 @@ function buildComponent(React, computeTransformStyle, computeTimingOpacity) {
   };
 }
 
-// node_modules/@lyric-video-maker/plugin-base/dist/index.js
-var PLUGIN_ASSET_PREFIX = "plugin-asset://";
-function createPluginAssetUri(pluginId, relativePath) {
-  const normalizedPath = relativePath.replace(/\\/g, "/");
-  const segments = normalizedPath.split("/");
-  if (segments.some((segment) => segment === "..")) {
-    throw new Error(
-      `Plugin asset path must not contain ".." segments: "${relativePath}"`
-    );
-  }
-  return `${PLUGIN_ASSET_PREFIX}${pluginId}/${normalizedPath}`;
-}
-
 // src/presets.ts
+var import_plugin_base2 = require("@lyric-video-maker/plugin-base");
+function transformModifier(id, x, y, width, height, anchor = "top-left") {
+  return {
+    id,
+    modifierId: "transform",
+    enabled: true,
+    options: {
+      x,
+      y,
+      width,
+      height,
+      anchor,
+      rotation: 0,
+      flipHorizontal: false,
+      flipVertical: false
+    }
+  };
+}
 function buildPresets(defaultOptions) {
   function makeScene(id, name, description, overrides) {
     return {
@@ -1215,6 +1248,7 @@ function buildPresets(defaultOptions) {
           id: "particles-1",
           componentId: "particles.particles",
           enabled: true,
+          modifiers: [],
           options: { ...defaultOptions, ...overrides }
         }
       ]
@@ -1285,6 +1319,7 @@ function buildPresets(defaultOptions) {
     makeScene("particles.fireflies", "Fireflies", "Warm glowing particles drifting lazily.", {
       shape: "circle",
       movementPattern: "random-walk",
+      randomWalkRandomness: 3,
       particleCount: 25,
       speed: 20,
       speedVariation: 40,
@@ -1378,7 +1413,8 @@ function buildPresets(defaultOptions) {
       glowColor: "#9966ff",
       glowStrength: 50
     }),
-    // Lofi+ — extends the built-in Lofi scene with warm floating particles
+    // Lofi+ — extends the built-in Lofi scene with warm floating particles.
+    // Position/size/timing live on each instance's modifier stack.
     {
       id: "particles.lofi-plus",
       name: "Lofi+",
@@ -1390,8 +1426,9 @@ function buildPresets(defaultOptions) {
           id: "background-image-1",
           componentId: "image",
           enabled: true,
+          modifiers: [],
           options: {
-            source: createPluginAssetUri("scene-registry", "assets/lofi-background.png"),
+            source: (0, import_plugin_base2.createPluginAssetUri)("scene-registry", "assets/lofi-background.png"),
             fitMode: "cover"
           }
         },
@@ -1399,6 +1436,7 @@ function buildPresets(defaultOptions) {
           id: "background-color-1",
           componentId: "background-color",
           enabled: true,
+          modifiers: [],
           options: {
             mode: "gradient",
             direction: "0deg",
@@ -1412,10 +1450,12 @@ function buildPresets(defaultOptions) {
           id: "particles-1",
           componentId: "particles.particles",
           enabled: true,
+          modifiers: [],
           options: {
             ...defaultOptions,
             shape: "circle",
             movementPattern: "random-walk",
+            randomWalkRandomness: 3,
             particleCount: 20,
             speed: 15,
             speedVariation: 40,
@@ -1437,9 +1477,10 @@ function buildPresets(defaultOptions) {
           id: "equalizer-1",
           componentId: "equalizer",
           enabled: true,
+          modifiers: [
+            transformModifier("equalizer-1-transform", 0, 80, 100, 20)
+          ],
           options: {
-            y: 80,
-            height: 20,
             layoutMode: "mirrored",
             barCount: 24,
             cornerRadius: 999,
@@ -1463,12 +1504,11 @@ function buildPresets(defaultOptions) {
           id: "divider-1",
           componentId: "shape",
           enabled: true,
+          modifiers: [
+            transformModifier("divider-1-transform", 5, 80, 90, 1)
+          ],
           options: {
             shapeType: "line",
-            x: 5,
-            y: 80,
-            width: 90,
-            height: 1,
             fillEnabled: false,
             strokeEnabled: true,
             strokeColor: "#fff5e6",
@@ -1480,8 +1520,10 @@ function buildPresets(defaultOptions) {
           id: "lyrics-by-line-1",
           componentId: "lyrics-by-line",
           enabled: true,
+          modifiers: [
+            transformModifier("lyrics-by-line-1-transform", 0, 0, 100, 78)
+          ],
           options: {
-            height: 78,
             lyricColor: "#fff5e6",
             lyricPosition: "bottom",
             lyricSize: 64,
@@ -1494,12 +1536,11 @@ function buildPresets(defaultOptions) {
           id: "static-text-1",
           componentId: "static-text",
           enabled: true,
+          modifiers: [
+            transformModifier("static-text-1-transform", 2, 2, 30, 6)
+          ],
           options: {
             text: "now playing",
-            y: 2,
-            height: 6,
-            x: 2,
-            width: 30,
             fontSize: 16,
             fontWeight: 300,
             color: "#aa9080",
@@ -1515,25 +1556,14 @@ function buildPresets(defaultOptions) {
 // src/plugin.ts
 function activate(host) {
   const { React } = host;
-  const {
-    transformCategory,
-    timingCategory,
-    DEFAULT_TRANSFORM_OPTIONS,
-    DEFAULT_TIMING_OPTIONS,
-    computeTransformStyle,
-    computeTimingOpacity
-  } = host.transform;
-  const defaultOptions = buildDefaultOptions(
-    DEFAULT_TRANSFORM_OPTIONS,
-    DEFAULT_TIMING_OPTIONS
-  );
-  const Component = buildComponent(React, computeTransformStyle, computeTimingOpacity);
+  const defaultOptions = buildDefaultOptions();
+  const Component = buildComponent(React);
   const particlesComponent = {
     id: "particles.particles",
     name: "Particles",
     description: "Highly customizable particle system with multiple shapes, movement patterns, colors, audio reactivity, depth, glow, and trails.",
     staticWhenMarkupUnchanged: false,
-    options: buildOptionsSchema(transformCategory, timingCategory),
+    options: buildOptionsSchema(),
     defaultOptions,
     getPrepareCacheKey,
     prepare: prepareParticles,

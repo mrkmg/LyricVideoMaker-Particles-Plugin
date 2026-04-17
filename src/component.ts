@@ -1,4 +1,5 @@
 import type { SceneRenderProps } from "@lyric-video-maker/plugin-base";
+import { useContainerSize } from "@lyric-video-maker/plugin-base";
 import type { ParticleOptions, PreparedParticlesData } from "./types.js";
 import { computePosition } from "./movement.js";
 import type { MovementParams } from "./movement.js";
@@ -46,7 +47,7 @@ function drawDiamond(ctx: CanvasRenderingContext2D, size: number): void {
 }
 
 function drawTriangle(ctx: CanvasRenderingContext2D, size: number): void {
-  const h = size * 0.866; // height of equilateral triangle
+  const h = size * 0.866;
   ctx.beginPath();
   ctx.moveTo(0, -h / 2);
   ctx.lineTo(size / 2, h / 2);
@@ -109,10 +110,8 @@ function drawSnowflake(ctx: CanvasRenderingContext2D, size: number): void {
     const angle = (i * Math.PI) / 3;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
-    // Main arm
     ctx.moveTo(0, 0);
     ctx.lineTo(cos * r, sin * r);
-    // Branches at 60% out
     const bx = cos * r * 0.6;
     const by = sin * r * 0.6;
     const branchLen = r * 0.3;
@@ -144,30 +143,23 @@ const SHAPE_DRAW: Record<string, ShapeDrawFn> = {
  * Build the Component render function.
  *
  * Uses a single <canvas> element instead of hundreds of divs.
- * All particle math runs in Chromium (parallel across render pages).
- * prepare() only sends lightweight particle states + audio data.
+ * Canvas is sized to the component's own container (read via
+ * useContainerSize) — modifiers own position/size/timing/opacity
+ * by wrapping this component's containerRef element.
  */
-export function buildComponent(
-  React: any,
-  computeTransformStyle: (options: any, canvas: any) => any,
-  computeTimingOpacity: (timeMs: number, timing: any) => number,
-) {
-  // Persistent canvas ref — survives across frames in the same Chromium page.
-  // React will reuse the element; we draw on it via the ref callback.
-  let canvasRef: HTMLCanvasElement | null = null;
-  let canvasCtx: CanvasRenderingContext2D | null = null;
-
+export function buildComponent(React: any) {
   return function ParticlesComponent(
     props: SceneRenderProps<ParticleOptions>,
   ): any {
-    const { options, frame, timeMs, video, prepared } = props;
+    const { options, frame, video, prepared, containerRef } = props;
+    const { width: cw, height: ch } = useContainerSize(containerRef);
     const data = prepared as unknown as PreparedParticlesData;
 
     if (!data.particles || data.particles.length === 0) return null;
 
-    const containerStyle = computeTransformStyle(options, video);
-    const timingOpacity = computeTimingOpacity(timeMs, options);
-    if (timingOpacity <= 0) return null;
+    // Fall back to video dimensions if container hasn't measured yet.
+    const w = Math.max(1, Math.round(cw || video.width));
+    const h = Math.max(1, Math.round(ch || video.height));
 
     // Audio
     let audioMods = NO_AUDIO;
@@ -206,26 +198,17 @@ export function buildComponent(
       speed: options.speed,
       turbulence: options.turbulence,
       swirlRadius: options.swirlRadius,
+      randomWalkRandomness: options.randomWalkRandomness,
     };
 
     const colors = data.resolvedColors;
-    const w = video.width;
-    const h = video.height;
     const speedAccum = data.audioSpeedAccum;
 
-    // Draw all particles onto the canvas via ref callback
     const refCallback = (el: HTMLCanvasElement | null) => {
       if (!el) return;
-      if (el !== canvasRef) {
-        canvasRef = el;
-        canvasCtx = el.getContext("2d");
-        el.width = w;
-        el.height = h;
-      }
-      const ctx = canvasCtx;
+      const ctx = el.getContext("2d");
       if (!ctx) return;
 
-      // Resize if needed
       if (el.width !== w || el.height !== h) {
         el.width = w;
         el.height = h;
@@ -244,32 +227,23 @@ export function buildComponent(
       for (let i = 0; i < data.particles.length; i++) {
         const p = data.particles[i];
 
-        // Age with recycling
         let age = frame - p.spawnFrame;
         if (age < 0) age += p.lifetimeFrames;
         const localAge = age % p.lifetimeFrames;
 
-        // Spawn burst: skip particles when audio is quiet
         if (audioMods.spawnMultiplier < 1 && (i % 3 !== 0)) {
           if ((p.movementSeed % 1) < (1 - audioMods.spawnMultiplier)) continue;
         }
 
-        // Compute normalized progress t (0-1 over lifetime).
-        // When audioSpeedAccum exists, t is derived from cumulative
-        // speed integration so speed-boost accumulates over time
-        // instead of teleporting the particle.
         let t: number;
         const cycleIndex = Math.floor(age / p.lifetimeFrames);
         const cycleStartFrame = p.spawnFrame + cycleIndex * p.lifetimeFrames;
         if (speedAccum && cycleStartFrame >= 0 && frame < speedAccum.length) {
-          // Cumulative speed at current frame vs cycle start
           const accumAtFrame = speedAccum[Math.min(frame, speedAccum.length - 1)];
           const accumAtCycleStart = cycleStartFrame > 0
             ? speedAccum[Math.min(cycleStartFrame - 1, speedAccum.length - 1)]
             : 0;
           const accumOverLifetime = accumAtFrame - accumAtCycleStart;
-          // Normalize: if every frame had speedMul=1, accumOverLifetime would equal localAge.
-          // Divide by lifetimeFrames to get 0-1 range.
           t = Math.min(1, accumOverLifetime / p.lifetimeFrames);
         } else {
           t = localAge / p.lifetimeFrames;
@@ -278,7 +252,6 @@ export function buildComponent(
         const fade = lifecycleFade(t);
         if (fade <= 0) continue;
 
-        // Depth multipliers
         let depthSpeed = 1;
         let depthSize = 1;
         let depthOpacity = 1;
@@ -293,7 +266,6 @@ export function buildComponent(
         const opacity = Math.min(1, p.opacity * fade * depthOpacity * audioMods.opacityMultiplier);
         if (opacity < 0.01) continue;
 
-        // Speed: depth only (audio speed is baked into t via accumulator)
         movParams.speed = speedAccum
           ? options.speed * depthSpeed
           : options.speed * depthSpeed * audioMods.speedMultiplier;
@@ -304,7 +276,6 @@ export function buildComponent(
           : shapeBaseRot;
         const rotRad = (rotation * Math.PI) / 180;
 
-        // Trail
         if (trailEnabled && trailLength > 0) {
           for (let tr = trailLength; tr >= 1; tr--) {
             const trailT = Math.max(0, t - (tr * 0.02));
@@ -338,7 +309,6 @@ export function buildComponent(
           }
         }
 
-        // Main particle
         const pos = computePosition(t, p, movParams);
         const px = (pos.x / 100) * w;
         const py = (pos.y / 100) * h;
@@ -366,13 +336,13 @@ export function buildComponent(
       ctx.globalAlpha = 1;
     };
 
-    // Single canvas element — 1 DOM node regardless of particle count
     return React.createElement(
       "div",
       {
+        ref: containerRef,
         style: {
-          ...containerStyle,
-          opacity: timingOpacity,
+          width: "100%",
+          height: "100%",
           overflow: "hidden",
           pointerEvents: "none",
         },

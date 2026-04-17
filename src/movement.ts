@@ -11,6 +11,7 @@ export interface MovementParams {
   speed: number;      // raw speed value (will be divided by 100)
   turbulence: number; // raw turbulence value (will be divided by 100)
   swirlRadius: number; // raw swirlRadius value (will be divided by 100)
+  randomWalkRandomness: number; // 0-100, chance per step to change direction
 }
 
 const TAU = Math.PI * 2;
@@ -24,6 +25,12 @@ function noise(seed: number, t: number): number {
     Math.sin(seed * 7.233 + t * 21.317) * 0.3 +
     Math.sin(seed * 3.145 + t * 67.891) * 0.2
   );
+}
+
+/** Deterministic hash → [0, 1). Used for random walk direction decisions. */
+function hash01(seed: number, step: number): number {
+  const x = Math.sin(seed * 127.1 + step * 311.7) * 43758.5453;
+  return x - Math.floor(x);
 }
 
 // Reusable position object to avoid allocations in the hot loop.
@@ -60,7 +67,7 @@ export function computePosition(
     case "converge":
       return converge(t, particle, speed, seed, speedMul);
     case "random-walk":
-      return randomWalk(t, particle, speed, turb, seed, speedMul);
+      return randomWalk(t, particle, speed, turb, seed, speedMul, params.randomWalkRandomness / 100);
     case "wave-sine":
       return waveSine(t, particle, speed, turb, seed, speedMul);
     case "rain":
@@ -137,12 +144,45 @@ function converge(
   return _pos;
 }
 
+const WALK_STEPS = 120;
+
 function randomWalk(
   t: number, p: ParticleState, speed: number, turb: number, seed: number, speedMul: number,
+  randomness: number,
 ): Position {
-  const scale = speed * speedMul * turb * 2.0;
-  _pos.x = p.startX + noise(seed, t * 4) * scale;
-  _pos.y = p.startY + noise(seed + 100, t * 4) * scale;
+  const stepSize = speed * speedMul * 250 / WALK_STEPS;
+  const numSteps = Math.floor(t * WALK_STEPS);
+  const frac = t * WALK_STEPS - numSteps;
+
+  // Initial direction from seed
+  let dir = hash01(seed, 0) * TAU;
+  let x = 0;
+  let y = 0;
+
+  for (let i = 1; i <= numSteps; i++) {
+    if (hash01(seed, i) < randomness) {
+      dir = hash01(seed + 50, i) * TAU;
+    }
+    x += Math.cos(dir) * stepSize;
+    y += Math.sin(dir) * stepSize;
+  }
+
+  // Interpolate into next step for smooth motion
+  if (frac > 0) {
+    if (hash01(seed, numSteps + 1) < randomness) {
+      dir = hash01(seed + 50, numSteps + 1) * TAU;
+    }
+    x += Math.cos(dir) * stepSize * frac;
+    y += Math.sin(dir) * stepSize * frac;
+  }
+
+  // Add turbulence wobble
+  const wobble = turb * 5;
+  x += noise(seed, t * 6) * wobble;
+  y += noise(seed + 100, t * 6) * wobble;
+
+  _pos.x = p.startX + x;
+  _pos.y = p.startY + y;
   return _pos;
 }
 

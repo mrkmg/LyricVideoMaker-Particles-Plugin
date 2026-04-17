@@ -6,6 +6,7 @@ export default defineConfig({
   outDir: "dist",
   clean: true,
   dts: false,
+  external: ["react","react-dom","@lyric-video-maker/plugin-base"],
   outExtension() {
     return { js: ".cjs" };
   },

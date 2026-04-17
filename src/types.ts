@@ -1,5 +1,3 @@
-import type { TransformOptions, TimingOptions } from "@lyric-video-maker/plugin-base";
-
 // ── Shape & Movement enums ──────────────────────────────────────────
 
 export type ParticleShape =
@@ -48,11 +46,11 @@ export type AudioMode =
 export type AudioBand = "sub-bass" | "bass" | "mid" | "high" | "full";
 
 // ── Options ─────────────────────────────────────────────────────────
+//
+// Position, size, timing, and opacity live on the modifier stack wrapping
+// this component — not on the component's own options.
 
-export interface ParticleOptions
-  extends TransformOptions,
-    TimingOptions,
-    Record<string, unknown> {
+export interface ParticleOptions extends Record<string, unknown> {
   // Particles
   shape: ParticleShape;
   customText: string;
@@ -67,6 +65,7 @@ export interface ParticleOptions
   directionAngle: number;
   turbulence: number;
   swirlRadius: number;
+  randomWalkRandomness: number;
 
   // Appearance
   colorMode: ColorMode;

@@ -9,7 +9,7 @@
     "version": "node -e \"const f='lyric-video-plugin.json';const j=JSON.parse(require('fs').readFileSync(f));j.version=require('./package.json').version;require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\\n')\" && git add lyric-video-plugin.json"
   },
   "devDependencies": {
-    "@lyric-video-maker/plugin-base": "^0.4.0",
+    "@lyric-video-maker/plugin-base": "^0.5.0",
     "react": "^18.3.1",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2"

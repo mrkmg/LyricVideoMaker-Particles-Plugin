@@ -123,6 +123,15 @@ export const movementCategory: SceneOptionCategory = {
     },
     {
       type: "number",
+      id: "randomWalkRandomness",
+      label: "Walk Randomness",
+      defaultValue: 5,
+      min: 0,
+      max: 100,
+      step: 1,
+    },
+    {
+      type: "number",
       id: "turbulence",
       label: "Turbulence",
       defaultValue: 20,
@@ -396,15 +405,13 @@ export const effectsCategory: SceneOptionCategory = {
   ],
 };
 
-// ── Build options array (called in plugin.ts with host categories) ──
+// ── Build options array ────────────────────────────────────────────
+//
+// Position, timing, opacity, and visibility are handled by the modifier
+// stack wrapping this component — they do not appear in the option schema.
 
-export function buildOptionsSchema(
-  transformCategory: SceneOptionCategory,
-  timingCategory: SceneOptionCategory,
-): SceneOptionEntry[] {
+export function buildOptionsSchema(): SceneOptionEntry[] {
   return [
-    transformCategory,
-    timingCategory,
     particlesCategory,
     movementCategory,
     appearanceCategory,
@@ -416,14 +423,8 @@ export function buildOptionsSchema(
 
 // ── Default options ─────────────────────────────────────────────────
 
-export function buildDefaultOptions(
-  defaultTransform: Record<string, unknown>,
-  defaultTiming: Record<string, unknown>,
-): ParticleOptions {
+export function buildDefaultOptions(): ParticleOptions {
   return {
-    ...(defaultTransform as any),
-    ...(defaultTiming as any),
-
     // Particles
     shape: "circle",
     customText: "✦",
@@ -438,6 +439,7 @@ export function buildDefaultOptions(
     directionAngle: 0,
     turbulence: 20,
     swirlRadius: 30,
+    randomWalkRandomness: 5,
 
     // Appearance
     colorMode: "single",

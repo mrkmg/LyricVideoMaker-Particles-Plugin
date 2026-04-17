@@ -3,6 +3,36 @@ import { createPluginAssetUri } from "@lyric-video-maker/plugin-base";
 import type { ParticleOptions } from "./types.js";
 
 /**
+ * Build a transform modifier instance for a scene preset.
+ * Position, size, and timing live on the modifier stack — not on a
+ * component's own options.
+ */
+function transformModifier(
+  id: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  anchor: string = "top-left",
+) {
+  return {
+    id,
+    modifierId: "transform",
+    enabled: true,
+    options: {
+      x,
+      y,
+      width,
+      height,
+      anchor,
+      rotation: 0,
+      flipHorizontal: false,
+      flipVertical: false,
+    },
+  };
+}
+
+/**
  * Build scene presets. Receives defaultOptions to spread as the base.
  */
 export function buildPresets(
@@ -25,6 +55,7 @@ export function buildPresets(
           id: "particles-1",
           componentId: "particles.particles",
           enabled: true,
+          modifiers: [],
           options: { ...defaultOptions, ...overrides } as Record<string, unknown>,
         },
       ],
@@ -99,6 +130,7 @@ export function buildPresets(
     makeScene("particles.fireflies", "Fireflies", "Warm glowing particles drifting lazily.", {
       shape: "circle",
       movementPattern: "random-walk",
+      randomWalkRandomness: 3,
       particleCount: 25,
       speed: 20,
       speedVariation: 40,
@@ -197,7 +229,8 @@ export function buildPresets(
       glowStrength: 50,
     }),
 
-    // Lofi+ — extends the built-in Lofi scene with warm floating particles
+    // Lofi+ — extends the built-in Lofi scene with warm floating particles.
+    // Position/size/timing live on each instance's modifier stack.
     {
       id: "particles.lofi-plus",
       name: "Lofi+",
@@ -210,6 +243,7 @@ export function buildPresets(
           id: "background-image-1",
           componentId: "image",
           enabled: true,
+          modifiers: [],
           options: {
             source: createPluginAssetUri("scene-registry", "assets/lofi-background.png"),
             fitMode: "cover",
@@ -219,6 +253,7 @@ export function buildPresets(
           id: "background-color-1",
           componentId: "background-color",
           enabled: true,
+          modifiers: [],
           options: {
             mode: "gradient",
             direction: "0deg",
@@ -232,10 +267,12 @@ export function buildPresets(
           id: "particles-1",
           componentId: "particles.particles",
           enabled: true,
+          modifiers: [],
           options: {
             ...defaultOptions,
             shape: "circle",
             movementPattern: "random-walk",
+            randomWalkRandomness: 3,
             particleCount: 20,
             speed: 15,
             speedVariation: 40,
@@ -257,9 +294,10 @@ export function buildPresets(
           id: "equalizer-1",
           componentId: "equalizer",
           enabled: true,
+          modifiers: [
+            transformModifier("equalizer-1-transform", 0, 80, 100, 20),
+          ],
           options: {
-            y: 80,
-            height: 20,
             layoutMode: "mirrored",
             barCount: 24,
             cornerRadius: 999,
@@ -283,12 +321,11 @@ export function buildPresets(
           id: "divider-1",
           componentId: "shape",
           enabled: true,
+          modifiers: [
+            transformModifier("divider-1-transform", 5, 80, 90, 1),
+          ],
           options: {
             shapeType: "line",
-            x: 5,
-            y: 80,
-            width: 90,
-            height: 1,
             fillEnabled: false,
             strokeEnabled: true,
             strokeColor: "#fff5e6",
@@ -300,8 +337,10 @@ export function buildPresets(
           id: "lyrics-by-line-1",
           componentId: "lyrics-by-line",
           enabled: true,
+          modifiers: [
+            transformModifier("lyrics-by-line-1-transform", 0, 0, 100, 78),
+          ],
           options: {
-            height: 78,
             lyricColor: "#fff5e6",
             lyricPosition: "bottom",
             lyricSize: 64,
@@ -314,12 +353,11 @@ export function buildPresets(
           id: "static-text-1",
           componentId: "static-text",
           enabled: true,
+          modifiers: [
+            transformModifier("static-text-1-transform", 2, 2, 30, 6),
+          ],
           options: {
             text: "now playing",
-            y: 2,
-            height: 6,
-            x: 2,
-            width: 30,
             fontSize: 16,
             fontWeight: 300,
             color: "#aa9080",

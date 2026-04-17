@@ -11,21 +11,9 @@ import { buildPresets } from "./presets.js";
 
 export function activate(host: LyricVideoPluginHost): LyricVideoPluginActivation {
   const { React } = host;
-  const {
-    transformCategory,
-    timingCategory,
-    DEFAULT_TRANSFORM_OPTIONS,
-    DEFAULT_TIMING_OPTIONS,
-    computeTransformStyle,
-    computeTimingOpacity,
-  } = host.transform;
 
-  const defaultOptions = buildDefaultOptions(
-    DEFAULT_TRANSFORM_OPTIONS as unknown as Record<string, unknown>,
-    DEFAULT_TIMING_OPTIONS as unknown as Record<string, unknown>,
-  );
-
-  const Component = buildComponent(React, computeTransformStyle, computeTimingOpacity);
+  const defaultOptions = buildDefaultOptions();
+  const Component = buildComponent(React);
 
   const particlesComponent: SceneComponentDefinition<ParticleOptions> = {
     id: "particles.particles",
@@ -33,7 +21,7 @@ export function activate(host: LyricVideoPluginHost): LyricVideoPluginActivation
     description:
       "Highly customizable particle system with multiple shapes, movement patterns, colors, audio reactivity, depth, glow, and trails.",
     staticWhenMarkupUnchanged: false,
-    options: buildOptionsSchema(transformCategory, timingCategory),
+    options: buildOptionsSchema(),
     defaultOptions,
     getPrepareCacheKey,
     prepare: prepareParticles,
